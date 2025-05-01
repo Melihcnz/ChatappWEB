@@ -1,0 +1,215 @@
+'use client';
+
+import { createContext, useContext, useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
+import axios from 'axios';
+import { useAuth } from './AuthContext';
+
+// API URL'i
+const API_URL = 'https://chatappapi-f5xk.onrender.com/api';
+const SOCKET_URL = 'https://chatappapi-f5xk.onrender.com';
+
+// Chat Context oluşturma
+const ChatContext = createContext();
+
+// Context hook
+export const useChat = () => useContext(ChatContext);
+
+// Provider bileşeni
+export const ChatProvider = ({ children }) => {
+  const { user, token, isAuthenticated } = useAuth();
+  const [socket, setSocket] = useState(null);
+  const [chats, setChats] = useState([]);
+  const [selectedChat, setSelectedChat] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState([]);
+  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [typing, setTyping] = useState(false);
+
+  // Socket.io bağlantısı
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const newSocket = io(SOCKET_URL);
+    setSocket(newSocket);
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [isAuthenticated]);
+
+  // Socket olaylarını dinle
+  useEffect(() => {
+    if (!socket || !user) return;
+
+    // Kullanıcı kurulumu
+    socket.emit('setup', user);
+
+    // Bağlantı kuruldu
+    socket.on('connected', () => {
+      console.log('Socket.IO bağlantısı kuruldu');
+    });
+
+    // Yazıyor
+    socket.on('typing', () => setTyping(true));
+    socket.on('stop-typing', () => setTyping(false));
+
+    // Kullanıcı durumu
+    socket.on('user-online', (userId) => {
+      setOnlineUsers((prevUsers) => [...prevUsers, userId]);
+    });
+
+    socket.on('user-offline', (userId) => {
+      setOnlineUsers((prevUsers) => prevUsers.filter((id) => id !== userId));
+    });
+
+    // Yeni mesaj
+    socket.on('message-received', (newMessage) => {
+      // Eğer seçili sohbet aktif ise ve mesaj bu sohbetten geliyorsa
+      if (selectedChat?._id === newMessage.chatId) {
+        setMessages((prevMessages) => [...prevMessages, newMessage]);
+      } else {
+        // Bildirim
+        setNotification((prevNotifications) => [newMessage, ...prevNotifications]);
+      }
+    });
+
+    return () => {
+      socket.off('connected');
+      socket.off('typing');
+      socket.off('stop-typing');
+      socket.off('user-online');
+      socket.off('user-offline');
+      socket.off('message-received');
+    };
+  }, [socket, user, selectedChat]);
+
+  // Tüm sohbetleri getir
+  const fetchChats = async () => {
+    if (!token) return;
+    
+    setLoading(true);
+    try {
+      const { data } = await axios.get(`${API_URL}/chats`);
+      setChats(data);
+    } catch (error) {
+      console.error('Sohbetleri getirme hatası:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Sohbet oluştur
+  const createChat = async (userId) => {
+    try {
+      const { data } = await axios.post(`${API_URL}/chats`, { userId });
+      
+      if (!chats.find((c) => c._id === data._id)) {
+        setChats([data, ...chats]);
+      }
+      
+      setSelectedChat(data);
+      return data;
+    } catch (error) {
+      console.error('Sohbet oluşturma hatası:', error);
+      throw error;
+    }
+  };
+
+  // Grup sohbeti oluştur
+  const createGroupChat = async (users, name) => {
+    try {
+      const { data } = await axios.post(`${API_URL}/chats/group`, {
+        users: JSON.stringify(users),
+        name,
+      });
+      
+      setChats([data, ...chats]);
+      setSelectedChat(data);
+      return data;
+    } catch (error) {
+      console.error('Grup sohbeti oluşturma hatası:', error);
+      throw error;
+    }
+  };
+
+  // Mesajları getir
+  const fetchMessages = async (chatId) => {
+    if (!chatId) return;
+    
+    setLoading(true);
+    try {
+      const { data } = await axios.get(`${API_URL}/messages/${chatId}`);
+      setMessages(data);
+      
+      // Sohbete katıl
+      socket.emit('join-chat', chatId);
+      
+      return data;
+    } catch (error) {
+      console.error('Mesajları getirme hatası:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Mesaj gönder
+  const sendMessage = async (content, chatId) => {
+    socket.emit('stop-typing', chatId);
+    
+    try {
+      const { data } = await axios.post(`${API_URL}/messages`, {
+        content,
+        chatId,
+      });
+      
+      socket.emit('new-message', data);
+      setMessages([...messages, data]);
+      
+      // Sohbetleri güncelle
+      fetchChats();
+      
+      return data;
+    } catch (error) {
+      console.error('Mesaj gönderme hatası:', error);
+      throw error;
+    }
+  };
+
+  // Yazıyor olayını başlat
+  const startTyping = (chatId) => {
+    socket.emit('typing', chatId);
+  };
+
+  // Yazıyor olayını durdur
+  const stopTyping = (chatId) => {
+    socket.emit('stop-typing', chatId);
+  };
+
+  // Context değerleri
+  const value = {
+    socket,
+    chats,
+    selectedChat,
+    setSelectedChat,
+    messages,
+    loading,
+    notification,
+    setNotification,
+    onlineUsers,
+    typing,
+    fetchChats,
+    createChat,
+    createGroupChat,
+    fetchMessages,
+    sendMessage,
+    startTyping,
+    stopTyping,
+  };
+
+  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
+};
+
+export default ChatContext; 
