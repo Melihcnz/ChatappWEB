@@ -19,6 +19,13 @@ const ChatList = () => {
 
   useEffect(() => {
     fetchChats();
+    
+    // Her 30 saniyede bir sohbetleri yenile
+    const interval = setInterval(() => {
+      fetchChats();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   // Chatın son mesajını veya bilgisini göster

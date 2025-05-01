@@ -66,12 +66,21 @@ export const ChatProvider = ({ children }) => {
 
     // Yeni mesaj
     socket.on('message-received', (newMessage) => {
+      console.log('Yeni mesaj alındı:', newMessage);
       // Eğer seçili sohbet aktif ise ve mesaj bu sohbetten geliyorsa
-      if (selectedChat?._id === newMessage.chatId) {
-        setMessages((prevMessages) => [...prevMessages, newMessage]);
+      if (selectedChat && selectedChat._id === newMessage.chatId) {
+        setMessages((prevMessages) => {
+          // Aynı mesajın tekrar eklenmesini önlemek için ID kontrolü yapıyoruz
+          if (prevMessages.some(msg => msg._id === newMessage._id)) {
+            return prevMessages;
+          }
+          return [...prevMessages, newMessage];
+        });
       } else {
         // Bildirim
         setNotification((prevNotifications) => [newMessage, ...prevNotifications]);
+        // Sohbetleri yenileme
+        fetchChats();
       }
     });
 
@@ -165,8 +174,17 @@ export const ChatProvider = ({ children }) => {
         chatId,
       });
       
+      // Yeni mesajı socket ile diğer kullanıcılara gönder
       socket.emit('new-message', data);
-      setMessages([...messages, data]);
+      
+      // Mesaj listesine ekle
+      setMessages((prevMessages) => {
+        // Aynı mesajın tekrar eklenmesini önlemek için ID kontrolü yapıyoruz
+        if (prevMessages.some(msg => msg._id === data._id)) {
+          return prevMessages;
+        }
+        return [...prevMessages, data];
+      });
       
       // Sohbetleri güncelle
       fetchChats();

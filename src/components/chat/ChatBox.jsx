@@ -27,6 +27,20 @@ const ChatBox = () => {
     }
   }, [selectedChat]);
 
+  // Sohbet yenileme işlemi (her 10 saniyede bir)
+  useEffect(() => {
+    if (!selectedChat) return;
+    
+    // Her 10 saniyede bir mesajları yenileme
+    const interval = setInterval(() => {
+      if (selectedChat) {
+        fetchMessages(selectedChat._id);
+      }
+    }, 10000);
+    
+    return () => clearInterval(interval);
+  }, [selectedChat]);
+
   // Otomatik kaydırma
   useEffect(() => {
     scrollToBottom();
