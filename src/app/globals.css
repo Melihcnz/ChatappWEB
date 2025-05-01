@@ -1,8 +1,24 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f7f9fc;
+  --foreground: #1e293b;
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --secondary: #64748b;
+  --accent: #8b5cf6;
+  --accent-hover: #7c3aed;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --gray-100: #f1f5f9;
+  --gray-200: #e2e8f0;
+  --gray-300: #cbd5e1;
+  --gray-700: #334155;
+  --gray-800: #1e293b;
+  --gray-900: #0f172a;
+  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --border-radius: 0.5rem;
 }
 
 @theme inline {
@@ -14,32 +30,52 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0f172a;
+    --foreground: #f1f5f9;
+    --primary: #3b82f6;
+    --primary-hover: #60a5fa;
+    --gray-100: #1e293b;
+    --gray-200: #334155;
+    --gray-300: #475569;
+    --gray-700: #94a3b8;
+    --gray-800: #cbd5e1;
+    --gray-900: #f1f5f9;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
 }
 
-/* Özel komponentler */
+/* Modern UI Komponentleri */
 .input {
-  @apply w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-800 dark:text-white transition duration-200;
+  @apply w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-800 dark:text-white transition duration-200 shadow-sm;
 }
 
 .btn {
-  @apply inline-flex items-center justify-center rounded-md px-4 py-2 font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 transition duration-200;
+  @apply inline-flex items-center justify-center rounded-lg px-4 py-2.5 font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 transition duration-200 shadow-sm;
 }
 
 .btn-primary {
   @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500;
 }
 
+.btn-secondary {
+  @apply bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 focus:ring-gray-500;
+}
+
+.btn-accent {
+  @apply bg-purple-600 text-white hover:bg-purple-700 focus:ring-purple-500;
+}
+
 .btn-outline {
   @apply bg-transparent border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 focus:ring-gray-500;
+}
+
+.card {
+  @apply bg-white dark:bg-gray-900 rounded-lg shadow-md p-4 transition-all duration-200;
 }
 
 /* Typing indicator animation */
@@ -85,19 +121,20 @@ body {
   }
 }
 
-/* Mesaj baloncukları için stiller */
+/* Modern Mesaj Baloncukları */
 .message-bubble {
   position: relative;
-  max-width: 70%;
+  max-width: 75%;
   padding: 0.75rem 1rem;
-  border-radius: 1rem;
-  margin-bottom: 0.5rem;
+  border-radius: 1.25rem;
+  margin-bottom: 0.75rem;
   word-wrap: break-word;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  line-height: 1.4;
 }
 
 .message-bubble-sender {
-  background-color: #3b82f6;
+  background: linear-gradient(135deg, #3b82f6, #60a5fa);
   color: white;
   border-top-right-radius: 0.25rem;
   margin-left: auto;
@@ -121,4 +158,66 @@ body {
   display: block;
   margin-top: 0.25rem;
   text-align: right;
+}
+
+/* Animasyonlar */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeDown {
+  from { 
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeDown {
+  animation: fadeDown 0.3s ease-in-out;
+}
+
+/* Loading animasyonu */
+.loading-spinner {
+  @apply inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite];
+  border-color: #3b82f6;
+  border-right-color: transparent;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #2d3748;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #4a5568;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #718096;
 }
