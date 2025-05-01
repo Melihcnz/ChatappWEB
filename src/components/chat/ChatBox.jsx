@@ -27,16 +27,17 @@ const ChatBox = () => {
     }
   }, [selectedChat]);
 
-  // Sohbet yenileme işlemi (her 10 saniyede bir)
+  // Sohbet yenileme işlemi (her 15 saniyede bir)
   useEffect(() => {
     if (!selectedChat) return;
     
-    // Her 10 saniyede bir mesajları yenileme
+    // Her 15 saniyede bir mesajları yenileme
     const interval = setInterval(() => {
       if (selectedChat) {
+        console.log("ChatBox: Mesajlar yenileniyor");
         fetchMessages(selectedChat._id);
       }
-    }, 10000);
+    }, 30000); // 15 saniye
     
     return () => clearInterval(interval);
   }, [selectedChat]);

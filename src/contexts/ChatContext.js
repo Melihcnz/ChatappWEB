@@ -45,39 +45,55 @@ export const ChatProvider = ({ children }) => {
 
     // Kullanıcı kurulumu
     socket.emit('setup', user);
+    console.log('Socket: Kullanıcı kurulumu yapıldı', user._id);
 
     // Bağlantı kuruldu
     socket.on('connected', () => {
-      console.log('Socket.IO bağlantısı kuruldu');
+      console.log('Socket: Bağlantı kuruldu');
     });
 
     // Yazıyor
-    socket.on('typing', () => setTyping(true));
-    socket.on('stop-typing', () => setTyping(false));
+    socket.on('typing', (chatId) => {
+      console.log(`Socket: ${chatId} sohbetinde birisi yazıyor`);
+      setTyping(true);
+    });
+    
+    socket.on('stop-typing', (chatId) => {
+      console.log(`Socket: ${chatId} sohbetinde yazma durdu`);
+      setTyping(false);
+    });
 
     // Kullanıcı durumu
     socket.on('user-online', (userId) => {
-      setOnlineUsers((prevUsers) => [...prevUsers, userId]);
+      console.log(`Socket: ${userId} kullanıcısı çevrimiçi oldu`);
+      setOnlineUsers((prevUsers) => {
+        if (prevUsers.includes(userId)) return prevUsers;
+        return [...prevUsers, userId];
+      });
     });
 
     socket.on('user-offline', (userId) => {
+      console.log(`Socket: ${userId} kullanıcısı çevrimdışı oldu`);
       setOnlineUsers((prevUsers) => prevUsers.filter((id) => id !== userId));
     });
 
     // Yeni mesaj
     socket.on('message-received', (newMessage) => {
-      console.log('Yeni mesaj alındı:', newMessage);
+      console.log('Socket: Yeni mesaj alındı', newMessage._id);
       // Eğer seçili sohbet aktif ise ve mesaj bu sohbetten geliyorsa
       if (selectedChat && selectedChat._id === newMessage.chatId) {
         setMessages((prevMessages) => {
           // Aynı mesajın tekrar eklenmesini önlemek için ID kontrolü yapıyoruz
           if (prevMessages.some(msg => msg._id === newMessage._id)) {
+            console.log(`Socket: ${newMessage._id} ID'li mesaj zaten mevcut`);
             return prevMessages;
           }
+          console.log(`Socket: ${newMessage._id} ID'li mesaj eklendi`);
           return [...prevMessages, newMessage];
         });
       } else {
         // Bildirim
+        console.log(`Socket: ${newMessage._id} ID'li mesaj bildirim olarak eklendi`);
         setNotification((prevNotifications) => [newMessage, ...prevNotifications]);
         // Sohbetleri yenileme
         fetchChats();
@@ -85,6 +101,7 @@ export const ChatProvider = ({ children }) => {
     });
 
     return () => {
+      console.log('Socket: Event dinleyicileri temizlendi');
       socket.off('connected');
       socket.off('typing');
       socket.off('stop-typing');
@@ -100,8 +117,14 @@ export const ChatProvider = ({ children }) => {
     
     setLoading(true);
     try {
+      const startTime = new Date();
+      console.log("Context: Sohbetler getiriliyor...");
+      
       const { data } = await axios.get(`${API_URL}/chats`);
       setChats(data);
+      
+      const endTime = new Date();
+      console.log(`Context: Sohbetler getirildi (${endTime - startTime}ms)`);
     } catch (error) {
       console.error('Sohbetleri getirme hatası:', error);
     } finally {
@@ -149,11 +172,17 @@ export const ChatProvider = ({ children }) => {
     
     setLoading(true);
     try {
+      const startTime = new Date();
+      console.log(`Context: ${chatId} ID'li sohbetin mesajları getiriliyor...`);
+      
       const { data } = await axios.get(`${API_URL}/messages/${chatId}`);
       setMessages(data);
       
       // Sohbete katıl
       socket.emit('join-chat', chatId);
+      
+      const endTime = new Date();
+      console.log(`Context: Mesajlar getirildi (${endTime - startTime}ms)`);
       
       return data;
     } catch (error) {

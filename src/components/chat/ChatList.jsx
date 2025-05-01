@@ -19,11 +19,13 @@ const ChatList = () => {
 
   useEffect(() => {
     fetchChats();
+    console.log("ChatList: İlk sohbet listesi yükleniyor");
     
     // Her 30 saniyede bir sohbetleri yenile
     const interval = setInterval(() => {
+      console.log("ChatList: Sohbet listesi yenileniyor");
       fetchChats();
-    }, 30000);
+    }, 30000); // Tam 30 saniye
     
     return () => clearInterval(interval);
   }, []);
