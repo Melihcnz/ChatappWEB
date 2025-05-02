@@ -132,6 +132,13 @@ const ChatList = () => {
                 <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
                   {getLastMessage(chat)}
                 </p>
+                {chat.latestMessage && 
+                  chat.latestMessage.sender?._id === user?._id && 
+                  chat.latestMessage.readBy?.length > 1 && (
+                  <span className="ml-2 text-sm font-bold text-blue-600 dark:text-blue-500" title="Görüldü">
+                    ✓✓
+                  </span>
+                )}
               </div>
             </div>
           </div>

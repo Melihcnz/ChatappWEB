@@ -22,11 +22,29 @@ const ChatBox = () => {
   const messageInputRef = useRef(null);
   const [showOptions, setShowOptions] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const fetchingRef = useRef(false);
+  const lastFetchTimeRef = useRef(0);
+  const scrollTimeoutRef = useRef(null);
 
   // Seçili sohbet değiştiğinde mesajları getir ve input'a focus yap
   useEffect(() => {
     if (selectedChat) {
-      fetchMessages(selectedChat._id);
+      fetchingRef.current = true;
+      const now = Date.now();
+      lastFetchTimeRef.current = now;
+      
+      fetchMessages(selectedChat._id)
+        .then(() => {
+          // Eğer bu, en son başlatılan fetch ise scroll yap
+          if (lastFetchTimeRef.current === now) {
+            performScrollToBottom(500);
+            fetchingRef.current = false;
+          }
+        })
+        .catch(() => {
+          fetchingRef.current = false;
+        });
+        
       messageInputRef.current?.focus();
     }
   }, [selectedChat]);
@@ -37,22 +55,59 @@ const ChatBox = () => {
     
     // Her 30 saniyede bir mesajları yenileme
     const interval = setInterval(() => {
-      if (selectedChat) {
-        fetchMessages(selectedChat._id);
+      if (selectedChat && !fetchingRef.current) {
+        fetchingRef.current = true;
+        const now = Date.now();
+        lastFetchTimeRef.current = now;
+        
+        fetchMessages(selectedChat._id)
+          .then(() => {
+            // Eğer bu, en son başlatılan fetch ise scroll yap
+            if (lastFetchTimeRef.current === now) {
+              performScrollToBottom(500);
+              fetchingRef.current = false;
+            }
+          })
+          .catch(() => {
+            fetchingRef.current = false;
+          });
       }
     }, 30000); // 30 saniye
     
     return () => clearInterval(interval);
   }, [selectedChat]);
 
-  // Otomatik kaydırma
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Güvenli ve kontrollü scroll işlemi
+  const performScrollToBottom = (delay = 100) => {
+    // Önceki timeout'u temizle
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+    
+    // Yeni bir timeout ayarla
+    scrollTimeoutRef.current = setTimeout(() => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+      scrollTimeoutRef.current = null;
+    }, delay);
   };
+  
+  // Otomatik kaydırma - Mesajlar değiştiğinde
+  useEffect(() => {
+    if (messages.length > 0 && !loading && !fetchingRef.current) {
+      performScrollToBottom(200);
+    }
+  }, [messages, loading]);
+
+  // Component unmount olduğunda timeout'ları temizle
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Mesaj gönderme
   const handleSendMessage = async (e) => {
@@ -63,6 +118,7 @@ const ChatBox = () => {
     try {
       await sendMessage(message, selectedChat._id);
       setMessage('');
+      performScrollToBottom(300);
     } catch (error) {
       console.error('Mesaj gönderme hatası:', error);
     }
@@ -276,7 +332,7 @@ const ChatBox = () => {
       )}
 
       {/* Mesaj listesi */}
-      <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-800">
+      <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-800" id="messages-container">
         {loading ? (
           <div className="flex justify-center items-center h-full">
             <div className="loading-spinner" />
@@ -324,9 +380,20 @@ const ChatBox = () => {
                         </span>
                       )}
                       <p className="break-words">{msg.content || msg.text}</p>
-                      <span className="message-time">
-                        {formatMessageTime(msg.createdAt)}
-                      </span>
+                      <div className="flex items-center justify-end">
+                        <span className="message-time">
+                          {formatMessageTime(msg.createdAt)}
+                        </span>
+                        {isMessageFromCurrentUser(msg) && msg.readBy && (
+                          <span className="ml-2" title="Görüldü">
+                            {msg.readBy.length > 1 ? (
+                              <span className="text-sm font-bold text-blue-600 dark:text-blue-500">✓✓</span>
+                            ) : (
+                              <span className="text-sm font-bold text-gray-500 dark:text-gray-400">✓</span>
+                            )}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

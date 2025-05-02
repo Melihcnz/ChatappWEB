@@ -91,6 +91,9 @@ export const ChatProvider = ({ children }) => {
           console.log(`Socket: ${newMessage._id} ID'li mesaj eklendi`);
           return [...prevMessages, newMessage];
         });
+        
+        // Otomatik olarak mesajı okundu olarak işaretle
+        markAsRead(newMessage._id);
       } else {
         // Bildirim
         console.log(`Socket: ${newMessage._id} ID'li mesaj bildirim olarak eklendi`);
@@ -98,6 +101,17 @@ export const ChatProvider = ({ children }) => {
         // Sohbetleri yenileme
         fetchChats();
       }
+    });
+    
+    // Mesaj okundu olayı
+    socket.on('message-read', (updatedMessage) => {
+      console.log('Socket: Mesaj okundu bilgisi alındı', updatedMessage._id);
+      // Mesajları güncelle
+      setMessages((prevMessages) => 
+        prevMessages.map((msg) => 
+          msg._id === updatedMessage._id ? updatedMessage : msg
+        )
+      );
     });
 
     return () => {
@@ -108,6 +122,7 @@ export const ChatProvider = ({ children }) => {
       socket.off('user-online');
       socket.off('user-offline');
       socket.off('message-received');
+      socket.off('message-read');
     };
   }, [socket, user, selectedChat]);
 
@@ -224,6 +239,33 @@ export const ChatProvider = ({ children }) => {
       throw error;
     }
   };
+  
+  // Mesajı okundu olarak işaretle
+  const markAsRead = async (messageId) => {
+    if (!messageId || !socket) return;
+    
+    try {
+      console.log(`Context: ${messageId} ID'li mesaj okundu olarak işaretleniyor`);
+      
+      const { data } = await axios.put(`${API_URL}/messages/${messageId}/read`);
+      
+      // Mesajı okundu olarak işaretleme bilgisini diğer kullanıcılara gönder
+      socket.emit('message-read', data);
+      
+      // Mesajları güncelle
+      setMessages((prevMessages) => 
+        prevMessages.map((msg) => 
+          msg._id === messageId ? data : msg
+        )
+      );
+      
+      console.log(`Context: ${messageId} ID'li mesaj okundu olarak işaretlendi`);
+      
+      return data;
+    } catch (error) {
+      console.error('Mesajı okundu olarak işaretleme hatası:', error);
+    }
+  };
 
   // Yazıyor olayını başlat
   const startTyping = (chatId) => {
@@ -254,6 +296,7 @@ export const ChatProvider = ({ children }) => {
     sendMessage,
     startTyping,
     stopTyping,
+    markAsRead,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
